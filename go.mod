@@ -1,7 +1,5 @@
 module mailsleuth
 
-replace github.com/44za12/mailsleuth => /Users/atio/Desktop/Aazar/Experiments.tmp/mailsleuth
-
 go 1.21.5
 
 require github.com/urfave/cli/v2 v2.27.1
