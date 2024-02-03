@@ -1,4 +1,4 @@
-module mailsleuth
+module github.com/44za12/mailsleuth
 
 go 1.21.5
 
