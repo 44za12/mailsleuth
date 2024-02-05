@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/44za12/mailsleuth/internal/utils"
+	"github.com/44za12/mailsleuth/pkg/shopping/amazon"
 	"github.com/44za12/mailsleuth/pkg/social/instagram"
 	"github.com/44za12/mailsleuth/pkg/social/spotify"
 	"github.com/44za12/mailsleuth/pkg/social/x"
@@ -111,6 +112,7 @@ func processSingleEmail(email string, client *http.Client) (map[string]bool, err
 		"instagram": instagram.Check,
 		"x":         x.Check,
 		"spotify":   spotify.Check,
+		"amazon":    amazon.Check,
 	}
 
 	for name, checkFunc := range services {

@@ -25,6 +25,12 @@ go install -v github.com/44za12/mailsleuth/cmd/mailsleuth@latest
 mailsleuth --email "user@example.com"
 ```
 
+OR
+
+```bash
+mailsleuth -e "user@example.com"
+```
+
 ### Using Proxies
 
 Single proxy:
@@ -33,10 +39,22 @@ Single proxy:
 mailsleuth --email "user@example.com" --proxy "http://user:pass@host:port"
 ```
 
+OR 
+
+```bash
+mailsleuth -e "user@example.com" -p "http://user:pass@host:port"
+```
+
 Proxy list from a file:
 
 ```bash
 mailsleuth --emails-file "emails.txt" --proxies-file "proxies.txt"
+```
+
+OR
+
+```bash
+mailsleuth -E "emails.txt" -P "proxies.txt"
 ```
 
 ### Bulk Processing
@@ -47,6 +65,12 @@ Process multiple emails from a file and save results to a JSON file:
 mailsleuth --emails-file "emails.txt" --output "results.json"
 ```
 
+OR
+
+```bash
+mailsleuth -E "emails.txt" -o "results.json"
+```
+
 ### Concurrency Control
 
 Set the concurrency limit (default is 10):
@@ -55,10 +79,22 @@ Set the concurrency limit (default is 10):
 mailsleuth --emails-file "emails.txt" --concurrency 20
 ```
 
+OR
+
+```bash
+mailsleuth -E "emails.txt" -c 20
+```
+
 ### List Supported Services
 
 ```bash
 mailsleuth --list
+```
+
+OR
+
+```bash
+mailsleuth -l
 ```
 
 ## Supported Services
@@ -66,6 +102,7 @@ mailsleuth --list
 - Instagram
 - Spotify
 - X (Twitter)
+- Amazon
 
 ## Contributing
 

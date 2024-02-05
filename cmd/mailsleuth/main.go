@@ -60,7 +60,7 @@ func main() {
 				return nil
 			}
 			if c.Bool("list") {
-				fmt.Println("Available services: [instagram, spotify, x]")
+				fmt.Println("Available services: [instagram, spotify, x, amazon]")
 				return nil
 			}
 			email := c.String("email")
