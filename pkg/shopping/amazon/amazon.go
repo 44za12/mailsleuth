@@ -3,7 +3,6 @@ package amazon
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -12,9 +11,11 @@ import (
 )
 
 func Check(email string, client *http.Client) (bool, error) {
-	userAgent := utils.RandomUserAgent()
+	standardHeaders := utils.StandardHeaders()
 	req, err := http.NewRequest("GET", "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2F%3F_encoding%3DUTF8%26ref_%3Dnav_ya_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=usflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&", nil)
-	req.Header.Set("User-Agent", userAgent)
+	for key, value := range standardHeaders {
+		req.Header.Set(key, value)
+	}
 	if err != nil {
 		return false, err
 	}
@@ -25,7 +26,7 @@ func Check(email string, client *http.Client) (bool, error) {
 	defer resp.Body.Close()
 	cookies := resp.Cookies()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := utils.DecodeResponseBody(resp)
 	if err != nil {
 		return false, err
 	}
@@ -44,8 +45,10 @@ func Check(email string, client *http.Client) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	for key, value := range standardHeaders {
+		req.Header.Set(key, value)
+	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", userAgent)
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
 	}
@@ -56,7 +59,7 @@ func Check(email string, client *http.Client) (bool, error) {
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := io.ReadAll(resp.Body)
+	responseBody, err := utils.DecodeResponseBody(resp)
 	if err != nil {
 		return false, err
 	}

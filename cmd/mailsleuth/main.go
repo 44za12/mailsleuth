@@ -53,6 +53,12 @@ func main() {
 				Aliases: []string{"l"},
 				Usage:   "List available services",
 			},
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Value:   false,
+				Usage:   "Make the program verbose, default: false (set true to get errors and to debug)",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if c.NArg() == 0 && c.NumFlags() == 0 {
@@ -68,6 +74,7 @@ func main() {
 			emailsFile := c.String("emails-file")
 			proxiesFile := c.String("proxies-file")
 			concurrency := c.Int("concurrency")
+			verbose := c.Bool("verbose")
 			outputFile := c.String("output")
 
 			if outputFile != "" && emailsFile == "" {
@@ -75,7 +82,7 @@ func main() {
 			}
 
 			if email != "" {
-				processor := processor.Processor{Email: email, Proxy: proxy}
+				processor := processor.Processor{Email: email, Proxy: proxy, Verbose: verbose}
 				err := processor.Process()
 				if err != nil {
 					return cli.Exit(fmt.Sprintf("Error processing email: %v", err), 1)

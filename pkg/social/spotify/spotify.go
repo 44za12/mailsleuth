@@ -3,7 +3,6 @@ package spotify
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/44za12/mailsleuth/internal/utils"
@@ -46,23 +45,25 @@ type response struct {
 func Check(email string, client *http.Client) (bool, error) {
 	url := fmt.Sprintf("https://spclient.wg.spotify.com/signup/public/v1/account?validate=1&email=%s", email)
 	req, err := http.NewRequest("GET", url, nil)
+	standardHeaders := utils.StandardHeaders()
 	if err != nil {
 		return false, err
 	}
-	req.Header.Add("User-Agent", utils.RandomUserAgent())
+	for key, value := range standardHeaders {
+		req.Header.Set(key, value)
+	}
 	resp, err := client.Do(req)
-
 	if err != nil {
 		return false, err
 	}
-
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+
+	body, err := utils.DecodeResponseBody(resp)
 
 	if err != nil {
 		return false, err
 	}
-
+	utils.SaveResponse(string(body), "spotify.json")
 	var r response
 	err = json.Unmarshal(body, &r)
 

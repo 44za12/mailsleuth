@@ -12,24 +12,28 @@ import (
 	"github.com/44za12/mailsleuth/pkg/social/instagram"
 	"github.com/44za12/mailsleuth/pkg/social/spotify"
 	"github.com/44za12/mailsleuth/pkg/social/x"
-
+	"github.com/cheggaaa/pb/v3"
 	"github.com/fatih/color"
 )
 
 type Processor struct {
-	Email string
-	Proxy string
+	Email   string
+	Proxy   string
+	Verbose bool
 }
 
 type ProcessorMany struct {
 	Emails           []string
 	Proxies          []string
 	ConcurrencyLimit int
+	Verbose          bool
 }
 
 func (p *Processor) Process() error {
-	msg := fmt.Sprintf("Checking for email: %s with proxy: %s", p.Email, p.Proxy)
-	fmt.Println(color.YellowString(msg))
+	if p.Verbose {
+		msg := fmt.Sprintf("Checking for email: %s with proxy: %s", p.Email, p.Proxy)
+		fmt.Println(color.YellowString(msg))
+	}
 	if p.Email == "" {
 		return errors.New("email required but not provided")
 	}
@@ -38,7 +42,7 @@ func (p *Processor) Process() error {
 		return fmt.Errorf("failed to create HTTP client: %v", err)
 	}
 
-	results, err := processSingleEmail(p.Email, client)
+	results, err := processSingleEmail(p.Email, client, p.Verbose)
 	if err != nil {
 		return err
 	}
@@ -60,6 +64,7 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 	results := make(map[string]map[string]bool)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	progressBar := pb.StartNew(len(pm.Emails))
 	sem := make(chan struct{}, pm.ConcurrencyLimit)
 
 	for i, email := range pm.Emails {
@@ -69,7 +74,7 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 		go func(email string, proxyIndex int) {
 			defer wg.Done()
 			defer func() { <-sem }()
-
+			defer progressBar.Increment()
 			proxy := ""
 			if len(pm.Proxies) > 0 {
 				proxy = pm.Proxies[proxyIndex%len(pm.Proxies)]
@@ -77,15 +82,19 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 
 			client, err := utils.NewHttpClient(proxy)
 			if err != nil {
-				msg := fmt.Sprintf("Error creating HTTP client for %s: %v\n", email, err)
-				utils.LogError(msg)
+				if pm.Verbose {
+					msg := fmt.Sprintf("Error creating HTTP client for %s: %v\n", email, err)
+					utils.LogError(msg)
+				}
 				return
 			}
 
-			emailResults, err := processSingleEmail(email, client)
+			emailResults, err := processSingleEmail(email, client, pm.Verbose)
 			if err != nil {
-				msg := fmt.Sprintf("Error processing email %s: %v\n", email, err)
-				utils.LogError(msg)
+				if pm.Verbose {
+					msg := fmt.Sprintf("Error processing email %s: %v\n", email, err)
+					utils.LogError(msg)
+				}
 				return
 			}
 
@@ -96,11 +105,11 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 	}
 
 	wg.Wait()
-
+	progressBar.Finish()
 	return results, nil
 }
 
-func processSingleEmail(email string, client *http.Client) (map[string]bool, error) {
+func processSingleEmail(email string, client *http.Client, verbose bool) (map[string]bool, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -122,7 +131,9 @@ func processSingleEmail(email string, client *http.Client) (map[string]bool, err
 
 			exists, err := checkFunc(email, client)
 			if err != nil {
-				utils.LogError(fmt.Sprintf("Error checking %s for %s: %v\n", name, email, err))
+				if verbose {
+					utils.LogError(fmt.Sprintf("Error checking %s for %s: %v\n", name, email, err))
+				}
 				return
 			}
 

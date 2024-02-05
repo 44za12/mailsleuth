@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -21,29 +20,35 @@ func Check(email string, client *http.Client) (bool, error) {
 	twitterUrl := "https://api.x.com/i/users/email_available.json"
 	data := url.Values{}
 	data.Set("email", email)
-	r, err := http.Get(twitterUrl + "?" + data.Encode())
+	standardHeaders := utils.StandardHeaders()
+	req, err := http.NewRequest("GET", twitterUrl+"?"+data.Encode(), nil)
+
+	if err != nil {
+		return false, err
+	}
+	for key, value := range standardHeaders {
+		req.Header.Set(key, value)
+	}
+	if err != nil {
+		return false, err
+	}
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return false, err
 	}
 
-	r.Header.Add("User-Agent", utils.RandomUserAgent())
-
-	if err != nil {
-		return false, err
-	}
-
-	if r.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("Status code error: %d %s", r.StatusCode, r.Status)
+	if resp.StatusCode != http.StatusOK {
+		msg := fmt.Sprintf("Status code error: %d %s", resp.StatusCode, resp.Status)
 		return false, errors.New(msg)
 	}
-
-	body, err := io.ReadAll(r.Body)
+	body, err := utils.DecodeResponseBody(resp)
 
 	if err != nil {
 		return false, err
 	}
 
+	utils.SaveResponse(string(body), "twitter.json")
 	var response response
 	err = json.Unmarshal(body, &response)
 	if err != nil {
