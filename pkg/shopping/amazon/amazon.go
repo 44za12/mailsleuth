@@ -1,69 +1,34 @@
 package amazon
 
 import (
-	"bytes"
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 
-	"github.com/44za12/mailsleuth/internal/utils"
+	"github.com/44za12/mailsleuth/internal/requestor"
 )
 
-func Check(email string, client *http.Client) (bool, error) {
-	standardHeaders := utils.StandardHeaders()
-	req, err := http.NewRequest("GET", "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2F%3F_encoding%3DUTF8%26ref_%3Dnav_ya_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=usflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&", nil)
-	for key, value := range standardHeaders {
-		req.Header.Set(key, value)
-	}
-	if err != nil {
-		return false, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
-	cookies := resp.Cookies()
+var (
+	GET_URL, _  = url.Parse("https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2F%3F_encoding%3DUTF8%26ref_%3Dnav_ya_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=usflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&")
+	POST_URL, _ = url.Parse("https://www.amazon.com/ap/signin")
+)
 
-	body, err := utils.DecodeResponseBody(resp)
+func Check(email string, requestor *requestor.Requestor) (bool, error) {
+	err := requestor.GET(GET_URL)
 	if err != nil {
 		return false, err
 	}
-	htmlContent := string(body)
-	formData, err := extractFormData(htmlContent)
+	formData, err := extractFormData(requestor.Response.Body)
 	if err != nil {
 		return false, err
 	}
 	formData["email"] = email
-	formValues := url.Values{}
-	for key, value := range formData {
-		formValues.Set(key, value)
-	}
-
-	req, err = http.NewRequest("POST", "https://www.amazon.com/ap/signin", bytes.NewBufferString(formValues.Encode()))
+	requestor.Request.Parameters = formData
+	err = requestor.POST(POST_URL)
 	if err != nil {
 		return false, err
 	}
-	for key, value := range standardHeaders {
-		req.Header.Set(key, value)
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-
-	resp, err = client.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
-
-	responseBody, err := utils.DecodeResponseBody(resp)
-	if err != nil {
-		return false, err
-	}
-	return checkDivExists(string(responseBody)), nil
+	return checkDivExists(requestor.Response.Body), nil
 }
 
 func extractFormData(htmlContent string) (map[string]string, error) {

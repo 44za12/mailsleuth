@@ -7,99 +7,55 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/44za12/mailsleuth/internal/requestor"
 	"github.com/44za12/mailsleuth/internal/utils"
 )
 
-func Check(email string, client *http.Client) (bool, error) {
-	standardHeaders := utils.StandardHeaders()
-	token, err := getCSRFToken(client, standardHeaders)
+var (
+	CSRF_URL, _      = url.Parse("https://www.instagram.com/accounts/emailsignup/")
+	REGISTGER_URL, _ = url.Parse("https://www.instagram.com/accounts/web_create_ajax/attempt/")
+)
 
+func Check(email string, requestor *requestor.Requestor) (bool, error) {
+	err := requestor.GET(CSRF_URL)
 	if err != nil {
 		return false, err
 	}
-
+	csrfRe := regexp.MustCompile(`"csrf_token":"([^"]+)"`)
+	match := csrfRe.FindStringSubmatch(string(requestor.Response.Body))
+	if len(match) == 0 {
+		return false, errors.New("CSRF Token not found")
+	}
+	token := match[1]
 	if strings.EqualFold(token, "") {
 		return false, errors.New("CSRF token not found")
 	}
-
-	attempUrl := "https://www.instagram.com/accounts/web_create_ajax/attempt/"
-	data := url.Values{}
-	data.Set("email", email)
-	data.Set("username", utils.RandomString(12))
-	req, err := http.NewRequest("POST", attempUrl, strings.NewReader(data.Encode()))
-
+	data := make(map[string]string)
+	data["email"] = email
+	data["username"] = utils.RandomString(12)
+	requestor.Request.Parameters = data
+	requestor.Headers["Cookie"] = "csrftoken=" + token + ";"
+	requestor.Headers["X-Csrftoken"] = token
+	time.Sleep(time.Duration(time.Duration.Seconds(1)))
+	err = requestor.POST(REGISTGER_URL)
 	if err != nil {
 		return false, err
 	}
-
-	for key, value := range standardHeaders {
-		req.Header.Set(key, value)
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Cookie", "csrftoken="+token+";")
-	req.Header.Add("X-Csrftoken", token)
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return false, err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("Status code error: %d %s", resp.StatusCode, resp.Status)
+	if requestor.Response.StatusCode != http.StatusOK {
+		msg := fmt.Sprintf("Status code error: %d", requestor.Response.StatusCode)
 		return false, errors.New(msg)
 	}
-
-	body, err := utils.DecodeResponseBody(resp)
-
-	if err != nil {
-		return false, err
-	}
-	match, err := regexp.MatchString("email_is_taken", string(body))
+	isTaken, err := regexp.MatchString("email_is_taken", requestor.Response.Body)
 
 	if err != nil {
 		return false, err
 	}
 
-	if !match {
+	if !isTaken {
 		return false, nil
 	}
 
 	return true, nil
-}
-
-func getCSRFToken(client *http.Client, standardHeaders map[string]string) (string, error) {
-	url := "https://www.instagram.com/accounts/emailsignup/"
-	req, err := http.NewRequest("GET", url, nil)
-
-	if err != nil {
-		return "", err
-	}
-	for key, value := range standardHeaders {
-		req.Header.Set(key, value)
-	}
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return "", err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("Status code error: %d %s", resp.StatusCode, resp.Status)
-		return "", errors.New(msg)
-	}
-	body, err := utils.DecodeResponseBody(resp)
-	if err != nil {
-		return "", err
-	}
-	re := regexp.MustCompile(`"csrf_token":"([^"]+)"`)
-	match := re.FindStringSubmatch(string(body))
-	if len(match) == 0 {
-		return "", errors.New("CSRF Token not found")
-	}
-
-	return match[1], nil
 }

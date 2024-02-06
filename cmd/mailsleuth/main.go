@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/44za12/mailsleuth/internal/processor"
 	"github.com/44za12/mailsleuth/internal/utils"
+	"github.com/fatih/color"
 
 	"github.com/urfave/cli/v2"
 )
@@ -46,7 +48,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "output",
 				Aliases: []string{"o"},
-				Usage:   "Output file for results (valid only with --emails-file) Example: results.json",
+				Usage:   "Output file to save results in (valid only with --emails-file) Example: results.csv",
 			},
 			&cli.BoolFlag{
 				Name:    "list",
@@ -57,7 +59,7 @@ func main() {
 				Name:    "verbose",
 				Aliases: []string{"v"},
 				Value:   false,
-				Usage:   "Make the program verbose, default: false (set true to get errors and to debug)",
+				Usage:   "Make the program verbose (set true to get errors and to debug)",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -66,7 +68,7 @@ func main() {
 				return nil
 			}
 			if c.Bool("list") {
-				fmt.Println("Available services: [instagram, spotify, x, amazon]")
+				fmt.Print(color.GreenString("Available services: \n\n- %s\n", strings.Join(utils.GetAllServices(), "\n- ")))
 				return nil
 			}
 			email := c.String("email")

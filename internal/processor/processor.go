@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
 
+	"github.com/44za12/mailsleuth/internal/requestor"
 	"github.com/44za12/mailsleuth/internal/utils"
+	"github.com/44za12/mailsleuth/pkg/entertainment/spotify"
+	"github.com/44za12/mailsleuth/pkg/programming/github"
 	"github.com/44za12/mailsleuth/pkg/shopping/amazon"
+	"github.com/44za12/mailsleuth/pkg/social/facebook"
 	"github.com/44za12/mailsleuth/pkg/social/instagram"
-	"github.com/44za12/mailsleuth/pkg/social/spotify"
 	"github.com/44za12/mailsleuth/pkg/social/x"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/fatih/color"
@@ -31,26 +33,26 @@ type ProcessorMany struct {
 
 func (p *Processor) Process() error {
 	if p.Verbose {
-		msg := fmt.Sprintf("Checking for email: %s with proxy: %s", p.Email, p.Proxy)
-		fmt.Println(color.YellowString(msg))
+		if p.Proxy != "" {
+			msg := fmt.Sprintf("Checking for email: %s with proxy: %s\n", p.Email, p.Proxy)
+			fmt.Println(color.YellowString(msg))
+		} else {
+			msg := fmt.Sprintf("Checking for email: %s\n", p.Email)
+			fmt.Println(color.YellowString(msg))
+		}
 	}
 	if p.Email == "" {
 		return errors.New("email required but not provided")
 	}
-	client, err := utils.NewHttpClient(p.Proxy)
-	if err != nil {
-		return fmt.Errorf("failed to create HTTP client: %v", err)
-	}
-
-	results, err := processSingleEmail(p.Email, client, p.Verbose)
+	results, err := processSingleEmail(p.Email, p.Proxy, p.Verbose)
 	if err != nil {
 		return err
 	}
 	for service, exists := range results {
 		if exists {
-			fmt.Printf(color.GreenString("%s account exists for: %s\n"), service, p.Email)
+			fmt.Printf(color.GreenString("✅ %s account exists for: %s\n"), service, p.Email)
 		} else {
-			fmt.Printf(color.HiBlueString("%s account does not exist for: %s\n"), service, p.Email)
+			fmt.Printf(color.HiRedString("❌ %s account does not exist for: %s\n"), service, p.Email)
 		}
 	}
 	return nil
@@ -80,19 +82,10 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 				proxy = pm.Proxies[proxyIndex%len(pm.Proxies)]
 			}
 
-			client, err := utils.NewHttpClient(proxy)
+			emailResults, err := processSingleEmail(email, proxy, pm.Verbose)
 			if err != nil {
 				if pm.Verbose {
-					msg := fmt.Sprintf("Error creating HTTP client for %s: %v\n", email, err)
-					utils.LogError(msg)
-				}
-				return
-			}
-
-			emailResults, err := processSingleEmail(email, client, pm.Verbose)
-			if err != nil {
-				if pm.Verbose {
-					msg := fmt.Sprintf("Error processing email %s: %v\n", email, err)
+					msg := fmt.Sprintf("error processing email %s: %v\n", email, err)
 					utils.LogError(msg)
 				}
 				return
@@ -109,7 +102,8 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 	return results, nil
 }
 
-func processSingleEmail(email string, client *http.Client, verbose bool) (map[string]bool, error) {
+func processSingleEmail(email string, proxy string, verbose bool) (map[string]bool, error) {
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -117,19 +111,25 @@ func processSingleEmail(email string, client *http.Client, verbose bool) (map[st
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	services := map[string]func(string, *http.Client) (bool, error){
+	services := map[string]func(string, *requestor.Requestor) (bool, error){
 		"instagram": instagram.Check,
 		"x":         x.Check,
 		"spotify":   spotify.Check,
 		"amazon":    amazon.Check,
+		"facebook":  facebook.Check,
+		"github":    github.Check,
 	}
 
 	for name, checkFunc := range services {
 		wg.Add(1)
-		go func(name string, checkFunc func(string, *http.Client) (bool, error)) {
+		go func(name string, checkFunc func(string, *requestor.Requestor) (bool, error)) {
 			defer wg.Done()
-
-			exists, err := checkFunc(email, client)
+			requestorObj, err := requestor.NewRequestor(email, proxy)
+			if err != nil {
+				utils.LogError("error getting new requestor")
+				return
+			}
+			exists, err := checkFunc(email, requestorObj)
 			if err != nil {
 				if verbose {
 					utils.LogError(fmt.Sprintf("Error checking %s for %s: %v\n", name, email, err))

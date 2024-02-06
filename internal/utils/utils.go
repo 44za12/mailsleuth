@@ -2,25 +2,28 @@ package utils
 
 import (
 	"bufio"
-	"compress/flate"
-	"compress/gzip"
-	"encoding/json"
+	"encoding/csv"
 	"fmt"
-	"io"
 	"math/rand"
-	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"os"
 	"strings"
 
-	"github.com/andybalholm/brotli"
 	"github.com/fatih/color"
-	"golang.org/x/net/publicsuffix"
 )
 
 func LogError(msg string) {
 	fmt.Println(color.RedString(msg))
+}
+
+func GetAllServices() []string {
+	services := make([]string, 0, 6)
+	services = append(services, "x")
+	services = append(services, "instagram")
+	services = append(services, "amazon")
+	services = append(services, "facebook")
+	services = append(services, "spotify")
+	services = append(services, "github")
+	return services
 }
 
 func PrintBanner() {
@@ -48,13 +51,20 @@ func PrintBanner() {
 			fmt.Println(yellow(line))
 		}
 	}
+	developerInfo := "Developed by: Aazar (https://www.github.com/44za12)"
+	reachInfo := "Reach: https://aazar.me"
+
+	fmt.Println()
+	fmt.Println(color.HiBlueString(developerInfo))
+	fmt.Println(color.HiBlueString(reachInfo))
+	fmt.Println()
 }
 
 func SaveResponse(htmlContent string, filename string) {
 	_ = os.WriteFile(filename, []byte(htmlContent), 0644)
 }
 
-func RandomUserAgent() string {
+func randomUserAgent() string {
 	userAgents := []string{
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/120.0.2210.144",
@@ -90,53 +100,9 @@ func RandomString(length int) string {
 	return string(result)
 }
 
-func NewHttpClient(proxyURL string) (*http.Client, error) {
-	jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	client := &http.Client{
-		Jar: jar,
-	}
-
-	if proxyURL != "" {
-		proxy, err := url.Parse(proxyURL)
-		if err != nil {
-			return nil, fmt.Errorf("invalid proxy URL: %w", err)
-		}
-		client.Transport = &http.Transport{
-			Proxy: http.ProxyURL(proxy),
-		}
-	}
-
-	return client, nil
-}
-
-func DecodeResponseBody(resp *http.Response) ([]byte, error) {
-	var reader io.Reader
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		var err error
-		reader, err = gzip.NewReader(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-	case "deflate":
-		reader = flate.NewReader(resp.Body)
-	case "br":
-		reader = brotli.NewReader(resp.Body)
-	default:
-		reader = resp.Body
-	}
-
-	decodedBody, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	return decodedBody, nil
-}
-
 func StandardHeaders() map[string]string {
 	return map[string]string{
-		"User-Agent":                RandomUserAgent(),
+		"User-Agent":                randomUserAgent(),
 		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
 		"Accept-Language":           "en-US,en;q=0.5",
 		"Accept-Encoding":           "gzip, deflate, br",
@@ -193,11 +159,27 @@ func OutputResultsToFile(filePath string, results map[string]map[string]bool) er
 	}
 	defer file.Close()
 
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ") // SetIndent for pretty printing
-	if err := encoder.Encode(results); err != nil {
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	serviceNames := GetAllServices()
+	header := append([]string{"email"}, GetAllServices()...)
+	if err := writer.Write(header); err != nil {
 		return err
 	}
-
+	for email, services := range results {
+		row := make([]string, 1, len(serviceNames)+1)
+		row[0] = email
+		for _, serviceName := range serviceNames {
+			exists, ok := services[serviceName]
+			if ok {
+				row = append(row, fmt.Sprintf("%t", exists))
+			} else {
+				row = append(row, "false")
+			}
+		}
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
 	return nil
 }

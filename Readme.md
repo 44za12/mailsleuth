@@ -59,16 +59,16 @@ mailsleuth -E "emails.txt" -P "proxies.txt"
 
 ### Bulk Processing
 
-Process multiple emails from a file and save results to a JSON file:
+Process multiple emails from a file and save results to a CSV file:
 
 ```bash
-mailsleuth --emails-file "emails.txt" --output "results.json"
+mailsleuth --emails-file "emails.txt" --output "results.csv"
 ```
 
 OR
 
 ```bash
-mailsleuth -E "emails.txt" -o "results.json"
+mailsleuth -E "emails.txt" -o "results.csv"
 ```
 
 ### Concurrency Control
@@ -103,6 +103,8 @@ mailsleuth -l
 - Spotify
 - X (Twitter)
 - Amazon
+- Facebook
+- Github
 
 ## Contributing
 
