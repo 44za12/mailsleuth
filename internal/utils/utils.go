@@ -174,7 +174,7 @@ func OutputResultsToFile(filePath string, results map[string]map[string]bool) er
 			if ok {
 				row = append(row, fmt.Sprintf("%t", exists))
 			} else {
-				row = append(row, "false")
+				row = append(row, "error")
 			}
 		}
 		if err := writer.Write(row); err != nil {
