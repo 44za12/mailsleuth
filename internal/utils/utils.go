@@ -35,28 +35,24 @@ func PrintBanner() {
         \/      \/                       \/            \/                    \/  
                                                                                  `
 	lines := strings.Split(msg, "\n")
-	red := color.New(color.FgRed).SprintFunc()
-	green := color.New(color.FgGreen).SprintFunc()
-	blue := color.New(color.FgBlue).SprintFunc()
-	yellow := color.New(color.FgYellow).SprintFunc()
+	cyan := color.New(color.FgHiCyan).SprintFunc()
+	magenta := color.New(color.FgHiMagenta).SprintFunc()
 	for i, line := range lines {
 		switch {
-		case i%4 == 0:
-			fmt.Println(red(line))
-		case i%4 == 1:
-			fmt.Println(green(line))
-		case i%4 == 2:
-			fmt.Println(blue(line))
-		case i%4 == 3:
-			fmt.Println(yellow(line))
+		case i%3 == 0:
+			fmt.Println(cyan(line))
+		case i%3 == 1:
+			fmt.Println(magenta(line))
+		case i%3 == 2:
+			fmt.Println(line)
 		}
 	}
 	developerInfo := "Developed by: Aazar (https://www.github.com/44za12)"
 	reachInfo := "Reach: https://aazar.me"
 
 	fmt.Println()
-	fmt.Println(color.HiBlueString(developerInfo))
-	fmt.Println(color.HiBlueString(reachInfo))
+	fmt.Println(color.HiCyanString(developerInfo))
+	fmt.Println(color.HiMagentaString(reachInfo))
 	fmt.Println()
 }
 

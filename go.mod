@@ -7,7 +7,6 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/fatih/color v1.16.0
 	github.com/urfave/cli/v2 v2.27.1
-	golang.org/x/net v0.20.0
 )
 
 require (
