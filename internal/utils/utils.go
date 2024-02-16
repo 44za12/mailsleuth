@@ -26,6 +26,18 @@ func GetAllServices() []string {
 	services = append(services, "facebook")
 	services = append(services, "spotify")
 	services = append(services, "github")
+	services = append(services, "kommo")
+	services = append(services, "axonaut")
+	services = append(services, "hubspot")
+	services = append(services, "insightly")
+	services = append(services, "nimble")
+	services = append(services, "wordpress")
+	services = append(services, "voxmedia")
+	services = append(services, "gravatar")
+	services = append(services, "anydo")
+	services = append(services, "lastpass")
+	services = append(services, "zoho")
+	services = append(services, "outlook")
 	return services
 }
 

@@ -105,6 +105,18 @@ mailsleuth -l
 - Amazon
 - Facebook
 - Github
+- Kommo
+- Axonaut
+- HubSpot
+- Insightly
+- Nimble
+- Wordpress
+- Voxmedia
+- Gravatar
+- AnyDo
+- LastPass
+- Zoho
+- Outlook
 
 ## Contributing
 
