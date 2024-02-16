@@ -8,12 +8,24 @@ import (
 
 	"github.com/44za12/mailsleuth/internal/requestor"
 	"github.com/44za12/mailsleuth/internal/utils"
+	"github.com/44za12/mailsleuth/pkg/cms/gravatar"
+	"github.com/44za12/mailsleuth/pkg/cms/voxmedia"
+	"github.com/44za12/mailsleuth/pkg/cms/wordpress"
+	"github.com/44za12/mailsleuth/pkg/crm/axonaut"
+	"github.com/44za12/mailsleuth/pkg/crm/hubspot"
+	"github.com/44za12/mailsleuth/pkg/crm/insightly"
+	"github.com/44za12/mailsleuth/pkg/crm/kommo"
+	"github.com/44za12/mailsleuth/pkg/crm/nimble"
 	"github.com/44za12/mailsleuth/pkg/entertainment/spotify"
+	"github.com/44za12/mailsleuth/pkg/productivity/anydo"
 	"github.com/44za12/mailsleuth/pkg/programming/github"
 	"github.com/44za12/mailsleuth/pkg/shopping/amazon"
 	"github.com/44za12/mailsleuth/pkg/social/facebook"
 	"github.com/44za12/mailsleuth/pkg/social/instagram"
 	"github.com/44za12/mailsleuth/pkg/social/x"
+	"github.com/44za12/mailsleuth/pkg/software/lastpass"
+	"github.com/44za12/mailsleuth/pkg/webmail/outlook"
+	"github.com/44za12/mailsleuth/pkg/webmail/zoho"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/fatih/color"
 )
@@ -118,6 +130,18 @@ func processSingleEmail(email string, proxy string, verbose bool) (map[string]bo
 		"amazon":    amazon.Check,
 		"facebook":  facebook.Check,
 		"github":    github.Check,
+		"kommo":     kommo.Check,
+		"axonaut":   axonaut.Check,
+		"hubspot":   hubspot.Check,
+		"insightly": insightly.Check,
+		"nimble":    nimble.Check,
+		"wordpress": wordpress.Check,
+		"voxmedia":  voxmedia.Check,
+		"gravatar":  gravatar.Check,
+		"anydo":     anydo.Check,
+		"lastpass":  lastpass.Check,
+		"zoho":      zoho.Check,
+		"outlook":   outlook.Check,
 	}
 
 	for name, checkFunc := range services {

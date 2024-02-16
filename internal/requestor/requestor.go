@@ -1,8 +1,10 @@
 package requestor
 
 import (
+	"bytes"
 	"compress/flate"
 	"compress/gzip"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -36,8 +38,9 @@ func (jar *CookieJar) EmptyCookies() {
 }
 
 type Request struct {
-	Client     *http.Client
-	Parameters map[string]string
+	Client        *http.Client
+	Parameters    map[string]string
+	RawParameters string
 }
 
 func NewRequest(client *http.Client) *Request {
@@ -49,12 +52,16 @@ func NewRequest(client *http.Client) *Request {
 type Response struct {
 	StatusCode int
 	Body       string
+	Cookies    []*http.Cookie
+	Headers    http.Header
 }
 
-func NewResponse(statusCode int, body string) *Response {
+func NewResponse(statusCode int, body string, cookies []*http.Cookie, headers http.Header) *Response {
 	return &Response{
 		StatusCode: statusCode,
 		Body:       body,
+		Cookies:    cookies,
+		Headers:    headers,
 	}
 }
 
@@ -110,32 +117,77 @@ func (r *Requestor) GET(url *url.URL) error {
 	if err != nil {
 		return err
 	}
-	r.Response = NewResponse(response.StatusCode, body)
+	r.Response = NewResponse(response.StatusCode, body, response.Cookies(), response.Header)
 	return nil
 }
 
 func (r *Requestor) POST(url *url.URL) error {
-	formData := url.Query()
-	for key, value := range r.Request.Parameters {
-		formData.Add(key, value)
+	isRaw := r.Request.RawParameters != ""
+	if (len(r.Request.Parameters) == 0) && !isRaw {
+		return errors.New("no formdata set")
 	}
-	req, err := http.NewRequest("POST", url.String(), strings.NewReader(formData.Encode()))
-	if err != nil {
-		return err
+	switch isRaw {
+	case true:
+		{
+			req, err := http.NewRequest("POST", url.String(), bytes.NewBuffer([]byte(r.Request.RawParameters)))
+			if err != nil {
+				return err
+			}
+			req.Header.Set("Content-Type", "application/json")
+			r.addHeaders(req)
+			response, err := r.Request.Client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer response.Body.Close()
+			body, err := r.decodeResponseBody(response)
+			if err != nil {
+				return err
+			}
+			r.Response = NewResponse(response.StatusCode, body, response.Cookies(), response.Header)
+			return nil
+		}
+	case false:
+		{
+			formData := url.Query()
+			for key, value := range r.Request.Parameters {
+				formData.Add(key, value)
+			}
+			req, err := http.NewRequest("POST", url.String(), strings.NewReader(formData.Encode()))
+			if err != nil {
+				return err
+			}
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r.addHeaders(req)
+			response, err := r.Request.Client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer response.Body.Close()
+			body, err := r.decodeResponseBody(response)
+			if err != nil {
+				return err
+			}
+			r.Response = NewResponse(response.StatusCode, body, response.Cookies(), response.Header)
+			return nil
+		}
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	r.addHeaders(req)
-	response, err := r.Request.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-	body, err := r.decodeResponseBody(response)
-	if err != nil {
-		return err
-	}
-	r.Response = NewResponse(response.StatusCode, body)
 	return nil
+}
+
+func (r *Requestor) GetCookie(cookieKey string) string {
+	var specificCookie *http.Cookie
+	for _, cookie := range r.Response.Cookies {
+		if cookie.Name == cookieKey {
+			specificCookie = cookie
+			break
+		}
+	}
+	return specificCookie.Value
+}
+
+func (r *Requestor) GetHeader(headerName string) string {
+	return r.Response.Headers.Get(headerName)
 }
 
 func (r *Requestor) addHeaders(req *http.Request) {

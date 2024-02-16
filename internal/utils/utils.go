@@ -2,11 +2,14 @@ package utils
 
 import (
 	"bufio"
+	"crypto/md5"
 	"encoding/csv"
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -96,6 +99,11 @@ func RandomString(length int) string {
 	return string(result)
 }
 
+func HashString(str string) string {
+	hash := md5.Sum([]byte(str))
+	return fmt.Sprintf("%x", hash)
+}
+
 func StandardHeaders() map[string]string {
 	return map[string]string{
 		"User-Agent":                randomUserAgent(),
@@ -178,4 +186,14 @@ func OutputResultsToFile(filePath string, results map[string]map[string]bool) er
 		}
 	}
 	return nil
+}
+
+func GetCurrentTimeStamp() int {
+	now := time.Now()
+	return int(now.UnixNano() / 1e6)
+}
+
+func GetCurrentTimeStampAsStr() string {
+	now := time.Now()
+	return strconv.Itoa(int(now.UnixNano() / 1e6))
 }
