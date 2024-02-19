@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/44za12/mailsleuth/internal/requestor"
@@ -24,7 +25,9 @@ import (
 	"github.com/44za12/mailsleuth/pkg/social/instagram"
 	"github.com/44za12/mailsleuth/pkg/social/x"
 	"github.com/44za12/mailsleuth/pkg/software/lastpass"
+	"github.com/44za12/mailsleuth/pkg/software/saperp"
 	"github.com/44za12/mailsleuth/pkg/webmail/outlook"
+	"github.com/44za12/mailsleuth/pkg/webmail/yahoo"
 	"github.com/44za12/mailsleuth/pkg/webmail/zoho"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/fatih/color"
@@ -114,39 +117,91 @@ func (pm *ProcessorMany) Process() (map[string]map[string]bool, error) {
 	return results, nil
 }
 
-func processSingleEmail(email string, proxy string, verbose bool) (map[string]bool, error) {
+// func processSingleEmailAllChecks(email string, proxy string, verbose bool) (map[string]bool, error) {
 
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
+
+// 	results := make(map[string]bool)
+// 	var mu sync.Mutex
+// 	var wg sync.WaitGroup
+
+// 	services := map[string]func(string, *requestor.Requestor) (bool, error){
+// 		"instagram": instagram.Check,
+// 		"x":         x.Check,
+// 		"spotify":   spotify.Check,
+// 		"amazon":    amazon.Check,
+// 		"facebook":  facebook.Check,
+// 		"github":    github.Check,
+// 		"kommo":     kommo.Check,
+// 		"axonaut":   axonaut.Check,
+// 		"hubspot":   hubspot.Check,
+// 		"insightly": insightly.Check,
+// 		"nimble":    nimble.Check,
+// 		"wordpress": wordpress.Check,
+// 		"voxmedia":  voxmedia.Check,
+// 		"gravatar":  gravatar.Check,
+// 		"anydo":     anydo.Check,
+// 		"lastpass":  lastpass.Check,
+// 		"zoho":      zoho.Check,
+// 		"outlook":   outlook.Check,
+// 		"saperp":    saperp.Check,
+// 		"yahoo":     yahoo.Check,
+// 	}
+
+// 	for name, checkFunc := range services {
+// 		wg.Add(1)
+// 		go func(name string, checkFunc func(string, *requestor.Requestor) (bool, error)) {
+// 			defer wg.Done()
+// 			requestorObj, err := requestor.NewRequestor(email, proxy)
+// 			if err != nil {
+// 				utils.LogError("error getting new requestor")
+// 				return
+// 			}
+// 			exists, err := checkFunc(email, requestorObj)
+// 			if err != nil {
+// 				if verbose {
+// 					utils.LogError(fmt.Sprintf("Error checking %s for %s: %v\n", name, email, err))
+// 				}
+// 				return
+// 			}
+
+// 			mu.Lock()
+// 			results[name] = exists
+// 			mu.Unlock()
+// 		}(name, checkFunc)
+// 	}
+
+// 	wg.Wait()
+
+// 	if ctx.Err() != nil {
+// 		return nil, ctx.Err()
+// 	}
+
+// 	return results, nil
+// }
+
+func processSingleEmail(email string, proxy string, verbose bool) (map[string]bool, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
+	domain := strings.Split(email, "@")[1]
+	specificDomains := map[string]bool{"yahoo.com": true, "outlook.com": true, "hotmail.com": true, "live.com": true, "msn.com": true, "office365.com": true, "zoho.com": true}
 	results := make(map[string]bool)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	if _, found := specificDomains[domain]; found {
+		var checkFunc func(string, *requestor.Requestor) (bool, error)
+		switch domain {
+		case "yahoo.com", "myyahoo.com":
+			checkFunc = yahoo.Check
+		case "outlook.com", "hotmail.com", "live.com", "msn.com", "office365.com":
+			checkFunc = outlook.Check
+		case "zoho.com":
+			checkFunc = zoho.Check
+		}
 
-	services := map[string]func(string, *requestor.Requestor) (bool, error){
-		"instagram": instagram.Check,
-		"x":         x.Check,
-		"spotify":   spotify.Check,
-		"amazon":    amazon.Check,
-		"facebook":  facebook.Check,
-		"github":    github.Check,
-		"kommo":     kommo.Check,
-		"axonaut":   axonaut.Check,
-		"hubspot":   hubspot.Check,
-		"insightly": insightly.Check,
-		"nimble":    nimble.Check,
-		"wordpress": wordpress.Check,
-		"voxmedia":  voxmedia.Check,
-		"gravatar":  gravatar.Check,
-		"anydo":     anydo.Check,
-		"lastpass":  lastpass.Check,
-		"zoho":      zoho.Check,
-		"outlook":   outlook.Check,
-	}
-
-	for name, checkFunc := range services {
 		wg.Add(1)
-		go func(name string, checkFunc func(string, *requestor.Requestor) (bool, error)) {
+		go func() {
 			defer wg.Done()
 			requestorObj, err := requestor.NewRequestor(email, proxy)
 			if err != nil {
@@ -156,22 +211,64 @@ func processSingleEmail(email string, proxy string, verbose bool) (map[string]bo
 			exists, err := checkFunc(email, requestorObj)
 			if err != nil {
 				if verbose {
-					utils.LogError(fmt.Sprintf("Error checking %s for %s: %v\n", name, email, err))
+					utils.LogError(fmt.Sprintf("Error checking specific domain %s for %s: %v", domain, email, err))
 				}
 				return
 			}
 
 			mu.Lock()
-			results[name] = exists
+			results[domain] = exists
 			mu.Unlock()
-		}(name, checkFunc)
+		}()
+	} else {
+		services := map[string]func(string, *requestor.Requestor) (bool, error){
+			"instagram": instagram.Check,
+			"x":         x.Check,
+			"spotify":   spotify.Check,
+			"amazon":    amazon.Check,
+			"facebook":  facebook.Check,
+			"github":    github.Check,
+			"kommo":     kommo.Check,
+			"axonaut":   axonaut.Check,
+			"hubspot":   hubspot.Check,
+			"insightly": insightly.Check,
+			"nimble":    nimble.Check,
+			"wordpress": wordpress.Check,
+			"voxmedia":  voxmedia.Check,
+			"gravatar":  gravatar.Check,
+			"anydo":     anydo.Check,
+			"lastpass":  lastpass.Check,
+			"zoho":      zoho.Check,
+			"outlook":   outlook.Check,
+			"saperp":    saperp.Check,
+			"yahoo":     yahoo.Check,
+		}
+		for name, checkFunc := range services {
+			wg.Add(1)
+			go func(name string, checkFunc func(string, *requestor.Requestor) (bool, error)) {
+				defer wg.Done()
+				requestorObj, err := requestor.NewRequestor(email, proxy)
+				if err != nil {
+					utils.LogError("error getting new requestor")
+					return
+				}
+				exists, err := checkFunc(email, requestorObj)
+				if err != nil {
+					if verbose {
+						utils.LogError(fmt.Sprintf("Error checking %s for %s: %v\n", name, email, err))
+					}
+					return
+				}
+
+				mu.Lock()
+				results[name] = exists
+				mu.Unlock()
+			}(name, checkFunc)
+		}
 	}
-
 	wg.Wait()
-
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-
 	return results, nil
 }

@@ -174,26 +174,22 @@ func OutputResultsToFile(filePath string, results map[string]map[string]bool) er
 		return err
 	}
 	defer file.Close()
-
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	serviceNames := GetAllServices()
-	header := append([]string{"email"}, GetAllServices()...)
+	header := []string{"email", "registered_on"}
 	if err := writer.Write(header); err != nil {
 		return err
 	}
+
 	for email, services := range results {
-		row := make([]string, 1, len(serviceNames)+1)
-		row[0] = email
-		for _, serviceName := range serviceNames {
-			exists, ok := services[serviceName]
-			if ok {
-				row = append(row, fmt.Sprintf("%t", exists))
-			} else {
-				row = append(row, "error")
+		registeredServices := []string{}
+		for serviceName, active := range services {
+			if active {
+				registeredServices = append(registeredServices, serviceName)
 			}
 		}
-		if err := writer.Write(row); err != nil {
+		registeredOn := strings.Join(registeredServices, ", ")
+		if err := writer.Write([]string{email, registeredOn}); err != nil {
 			return err
 		}
 	}

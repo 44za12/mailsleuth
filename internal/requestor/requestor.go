@@ -41,6 +41,7 @@ type Request struct {
 	Client        *http.Client
 	Parameters    map[string]string
 	RawParameters string
+	Cookies       []*http.Cookie
 }
 
 func NewRequest(client *http.Client) *Request {
@@ -105,6 +106,11 @@ func NewRequestor(email string, proxyURL string) (*Requestor, error) {
 
 func (r *Requestor) GET(url *url.URL) error {
 	req, err := http.NewRequest("GET", url.String(), nil)
+	if len(r.Request.Cookies) > 1 {
+		for _, c := range r.Request.Cookies {
+			req.AddCookie(c)
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -133,6 +139,11 @@ func (r *Requestor) POST(url *url.URL) error {
 			if err != nil {
 				return err
 			}
+			if len(r.Request.Cookies) > 1 {
+				for _, c := range r.Request.Cookies {
+					req.AddCookie(c)
+				}
+			}
 			req.Header.Set("Content-Type", "application/json")
 			r.addHeaders(req)
 			response, err := r.Request.Client.Do(req)
@@ -156,6 +167,11 @@ func (r *Requestor) POST(url *url.URL) error {
 			req, err := http.NewRequest("POST", url.String(), strings.NewReader(formData.Encode()))
 			if err != nil {
 				return err
+			}
+			if len(r.Request.Cookies) > 1 {
+				for _, c := range r.Request.Cookies {
+					req.AddCookie(c)
+				}
 			}
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			r.addHeaders(req)
