@@ -185,18 +185,19 @@ func processSingleEmail(email string, proxy string, verbose bool) (map[string]bo
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	domain := strings.Split(email, "@")[1]
-	specificDomains := map[string]bool{"yahoo.com": true, "outlook.com": true, "hotmail.com": true, "live.com": true, "msn.com": true, "office365.com": true, "zoho.com": true}
+	webMailProviders := map[string]bool{"yahoo": true, "outlook": true, "hotmail": true, "live": true, "msn": true, "office365": true, "zoho": true}
 	results := make(map[string]bool)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	if _, found := specificDomains[domain]; found {
+	orgName := strings.Split(domain, ".")[0]
+	if _, found := webMailProviders[orgName]; found {
 		var checkFunc func(string, *requestor.Requestor) (bool, error)
-		switch domain {
-		case "yahoo.com", "myyahoo.com":
+		switch orgName {
+		case "yahoo":
 			checkFunc = yahoo.Check
-		case "outlook.com", "hotmail.com", "live.com", "msn.com", "office365.com":
+		case "outlook", "hotmail", "live", "msn", "office365":
 			checkFunc = outlook.Check
-		case "zoho.com":
+		case "zoho":
 			checkFunc = zoho.Check
 		}
 
