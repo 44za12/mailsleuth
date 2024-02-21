@@ -11,7 +11,6 @@ import (
 	"github.com/44za12/mailsleuth/pkg/cms/gravatar"
 	"github.com/44za12/mailsleuth/pkg/cms/voxmedia"
 	"github.com/44za12/mailsleuth/pkg/cms/wordpress"
-	"github.com/44za12/mailsleuth/pkg/crm/axonaut"
 	"github.com/44za12/mailsleuth/pkg/crm/hubspot"
 	"github.com/44za12/mailsleuth/pkg/crm/insightly"
 	"github.com/44za12/mailsleuth/pkg/crm/kommo"
@@ -132,7 +131,7 @@ func processSingleEmail(email string, proxy string, verbose bool) (map[string]bo
 		"facebook":  facebook.Check,
 		"github":    github.Check,
 		"kommo":     kommo.Check,
-		"axonaut":   axonaut.Check,
+		// "axonaut":   axonaut.Check,
 		"hubspot":   hubspot.Check,
 		"insightly": insightly.Check,
 		"nimble":    nimble.Check,
